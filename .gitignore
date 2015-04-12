@@ -1,3 +1,10 @@
+# Backup files
+*~
+
+# Input / Output files
+*.in
+*.out
+
 # Compiled Object files
 *.slo
 *.lo
