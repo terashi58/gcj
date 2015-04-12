@@ -12,13 +12,15 @@ const int DX[] = {1, 0, -1, 0};
 const int DY[] = {0, 1, 0, -1};
 
 struct Omino {
+  static const int LEN = 8;
+
   Omino() : w(0), h(0) {}
   Omino(int ww, int hh) : w(ww), h(hh) {}
 
   bool get(int x, int y) const {
-    return (0 <= x && x < w && 0 <= y && y < h) ? cell[x+y*8] : false;
+    return (0 <= x && x < w && 0 <= y && y < h) ? cell[x+y*LEN] : false;
   }
-  void set(int x, int y) { cell[x+y*8] = true; }
+  void set(int x, int y) { cell[x+y*LEN] = true; }
   bool settable(int x, int y) const {
     if (!get(x, y)) {
       for (int i = 0; i < 4; ++i) {
@@ -30,10 +32,7 @@ struct Omino {
 
   Omino expanded(int x, int y) const {
     Omino cp(w + x, h + y);
-    for (int i = 0; i < w; ++i)
-      for (int j = 0; j < h; ++j)
-	if (get(i, j))
-	  cp.set(i, j);
+    cp.cell = cell;
     return cp;
   }
 
@@ -65,16 +64,19 @@ struct Omino {
   }
 
   Omino normalized() const {
-    Omino cps[8];
-    listup(cps);
-    return *min_element(cps, cps+8);
+    vector<Omino> cps = listup();
+    return *min_element(cps.begin(), cps.end());
   }
 
-  void listup(Omino cps[8]) const {
+  vector<Omino> listup() const {
+    vector<Omino> cps(8);
     cps[0] = *this;
     for (int i = 1; i < 4; ++i) cps[i] = cps[i-1].rotated();
     cps[4] = reflected();
     for (int i = 5; i < 8; ++i) cps[i] = cps[i-1].rotated();
+    sort(cps.begin(), cps.end());
+    cps.erase(unique(cps.begin(), cps.end()), cps.end());
+    return cps;
   }
 
   bool operator ==(const Omino& b) const { return cell == b.cell; }
@@ -98,45 +100,34 @@ struct Omino {
   }
 
   int w, h;
-  bitset<64> cell;
+  bitset<LEN*LEN> cell;
 };
 
-const int MAX_SIZE = 7;
+const int MAX_SIZE = 6;
 set<Omino> piece[MAX_SIZE + 1];
 
 void Extend(int size) {
   for (const Omino& base : piece[size]) {
-    for (int x = 0; x < base.w; ++x)
-      for (int y = 0; y < base.h; ++y)
+    for (int x = -1; x <= base.w; ++x)
+      for (int y = -1; y <= base.h; ++y)
 	if (base.settable(x, y)) {
 	  Omino ex = base;
-	  ex.set(x, y);
+	  int dx = 0, dy = 0;
+	  if (x == ex.w) {
+	    ex = ex.expanded(1, 0);
+	  } else if (x == -1) {
+	    ex = ex.shifted(1, 0);
+	    dx = 1;
+	  }
+	  if (y == ex.h) {
+	    ex = ex.expanded(0, 1);
+	  } else if (y == -1) {
+	    ex = ex.shifted(0, 1);
+	    dy = 1;
+	  }
+	  ex.set(x + dx, y + dy);
 	  piece[size+1].insert(ex.normalized());
 	}
-    for (int x = 0; x < base.w; ++x) {
-      if (base.settable(x, base.h)) {
-	Omino ex = base.expanded(0, 1);
-	ex.set(x, base.h);
-	piece[size+1].insert(ex.normalized());
-      }
-      if (base.settable(x, -1)) {
-	Omino ex = base.shifted(0, 1);
-	ex.set(x, 0);
-	piece[size+1].insert(ex.normalized());
-      }
-    }
-    for (int y = 0; y < base.h; ++y) {
-      if (base.settable(base.w, y)) {
-	Omino ex = base.expanded(1, 0);
-	ex.set(base.w, y);
-	piece[size+1].insert(ex.normalized());
-      }
-      if (base.settable(-1, y)) {
-	Omino ex = base.shifted(1, 0);
-	ex.set(0, y);
-	piece[size+1].insert(ex.normalized());
-      }
-    }
   }
 }
 
@@ -176,8 +167,7 @@ int Count(int px, int py, int color) {
     field[x][y] = color;
     ++cnt;
     for (int i = 0; i < 4; ++i)
-      for (int j = 0; j < 4; ++j)
-	up.emplace_back(x+DX[i], y+DY[i]);
+      up.emplace_back(x+DX[i], y+DY[i]);
   }
   return cnt;
 }
@@ -207,8 +197,7 @@ bool CanPlaceAPieace(const Omino& p) {
 bool CanPlace() {
   if (X > MAX_SIZE) return false;
   for (const Omino& base : piece[X]) {
-    Omino cps[8];
-    base.listup(cps);
+    vector<Omino> cps = base.listup();
     bool placed = false;
     for (const Omino& p : cps) {
       if (CanPlaceAPieace(p)) {
