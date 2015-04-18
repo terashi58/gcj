@@ -55,12 +55,12 @@ void Solve() {
       if (i == j) continue;
       Pos d(pos[j].x - p0.x, pos[j].y - p0.y);
       if (d.y > 0 || (d.y == 0 && d.x > 0)) {
-	upper[Real(d.x, d.y).theta].push_back(j);
-	args.insert(Real(d.x, d.y).theta);
+	upper[Real(d.x, d.y)].push_back(j);
+	args.insert(Real(d.x, d.y));
 	++u;
       } else {
-	lower[Real(-d.x, -d.y).theta].push_back(j);
-	args.insert(Real(-d.x, -d.y).theta);
+	lower[Real(-d.x, -d.y)].push_back(j);
+	args.insert(Real(-d.x, -d.y));
 	++l;
       }
     }
